@@ -1,0 +1,26 @@
+{
+  "model": "open_router/minimax/minimax-m3.1-flash:free",
+  "effort": "high",
+  "tiers": {
+    "opus": {
+      "model": "open_router/minimax/minimax-m3.1-flash:free",
+      "effort": "high",
+      "alias": "minimax-m3.1-flash:free · OR"
+    },
+    "sonnet": {
+      "model": "open_router/nvidia/nemotron-3.5-super-vl:free",
+      "effort": "high",
+      "alias": "nemotron-3.5-super-vl:free · OR"
+    },
+    "haiku": {
+      "model": "open_router/xingchen-agi/xing4.0-29b-a4b:free",
+      "effort": "high",
+      "alias": "xing4.0-29b-a4b:free · OR"
+    },
+    "fable": {
+      "model": "open_router/minimax/minimax-m3.1-flash:free",
+      "effort": "high",
+      "alias": "minimax-m3.1-flash:free · OR"
+    }
+  }
+}

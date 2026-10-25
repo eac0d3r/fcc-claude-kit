@@ -1,0 +1,26 @@
+{
+  "model": "nvidia_nim/z-ai/glm-5.3",
+  "effort": "high",
+  "tiers": {
+    "opus": {
+      "model": "nvidia_nim/z-ai/glm-5.3",
+      "effort": "high",
+      "alias": "glm-5.3 · NIM"
+    },
+    "sonnet": {
+      "model": "nvidia_nim/z-ai/glm-5.3-flash",
+      "effort": "high",
+      "alias": "glm-5.3-flash · NIM"
+    },
+    "haiku": {
+      "model": "nvidia_nim/nvidia/nemotron-3.5-super-vl-120b-a12b",
+      "effort": "high",
+      "alias": "nemotron-3.5-super-vl-120b-a12b · NIM"
+    },
+    "fable": {
+      "model": "nvidia_nim/z-ai/glm-5.3",
+      "effort": "high",
+      "alias": "glm-5.3 · NIM"
+    }
+  }
+}

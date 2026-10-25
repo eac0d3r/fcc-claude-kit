@@ -1,0 +1,26 @@
+{
+  "model": "github_copilot/grok-4.7",
+  "effort": "high",
+  "tiers": {
+    "opus": {
+      "model": "github_copilot/claude-sonnet-5.5",
+      "effort": "high",
+      "alias": "claude-sonnet-5.5 · Copilot"
+    },
+    "sonnet": {
+      "model": "github_copilot/grok-4.7",
+      "effort": "high",
+      "alias": "grok-4.7 · Copilot"
+    },
+    "haiku": {
+      "model": "github_copilot/claude-haiku-5.5",
+      "effort": "high",
+      "alias": "claude-haiku-5.5 · Copilot"
+    },
+    "fable": {
+      "model": "github_copilot/claude-sonnet-5.5",
+      "effort": "high",
+      "alias": "claude-sonnet-5.5 · Copilot"
+    }
+  }
+}
