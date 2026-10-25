@@ -1,68 +1,68 @@
 # fcc-claude-kit
 
-Claude Code CLI com **dois modos** no mesmo computador:
+Claude Code CLI with **two modes** on the same machine:
 
-- `claude` — padrão, usando sua assinatura Anthropic. Este kit não o altera.
-- `fcc-claude` — o mesmo Claude Code roteado pelo [Free Claude Code (FCC)](https://github.com/alishahryar1/free-claude-code) para **NVIDIA NIM**, **OpenRouter** e **GitHub Copilot**, com **profiles** de modelos.
+- `claude`: the stock Claude Code on your Anthropic subscription. This kit never touches it.
+- `fcc-claude`: the same Claude Code routed through [Free Claude Code (FCC)](https://github.com/alishahryar1/free-claude-code) to **NVIDIA NIM**, **OpenRouter** and **GitHub Copilot**, with switchable model **profiles**.
 
-Só o Claude Code CLI é usado como harness (nada de Codex, Aider, OpenCode…).
+Claude Code CLI is the only harness used (no Codex, Aider, OpenCode, etc.).
 
-> Projeto independente. Não é afiliado nem endossado pela Anthropic nem pelo FCC. O FCC é AGPL-3.0 e **não** é distribuído aqui: o `install.sh` o baixa do PyPI numa versão fixada.
+> Independent project, not affiliated with or endorsed by Anthropic or the FCC project. FCC is AGPL-3.0 and is **not** redistributed here: `install.sh` downloads a pinned version from PyPI.
 
-## O que o kit adiciona ao FCC
+## What the kit adds on top of FCC
 
-| Recurso | Como |
+| Feature | How |
 |---|---|
-| Profiles (criar, listar, editar, excluir, ativar) | `fcc-profile new/list/show/edit/rm/use/current` |
-| Modelo por tier (fable, opus, sonnet, haiku) + effort | campos `model` e `effort` de cada tier |
-| Alias com o nome do modelo real | aparece no cabeçalho, statusline e `/model` do Claude Code |
-| `/model` enxuto (sem os ~800 modelos do catálogo) | `fcc-claude` desliga o gateway discovery |
-| Compatibilidade Copilot + Claude Code recente | `fcc-profile patch` (ver [TROUBLESHOOTING](docs/TROUBLESHOOTING.md)) |
-| Diagnóstico | `fcc-profile doctor` |
+| Profiles (create, list, edit, delete, activate) | `fcc-profile new/list/show/edit/rm/use/current` |
+| Per-tier model (fable, opus, sonnet, haiku) + effort | `model` and `effort` fields of each tier |
+| Alias showing the real model name | shown in the Claude Code header, statusline and `/model` ("currently ...") |
+| Lean `/model` (no ~800-model catalog) | `fcc-claude` turns gateway model discovery off |
+| Copilot + recent Claude Code compatibility | `fcc-profile patch` (see [TROUBLESHOOTING](docs/TROUBLESHOOTING.md)) |
+| Diagnostics | `fcc-profile doctor` |
 
-## Instalação
+## Install
 
-Pré-requisitos: macOS ou Linux, `uv`, `python3`, `curl`, Claude Code; `npm` só se usar Copilot.
+Requirements: macOS or Linux, `uv`, `python3`, `curl`, Claude Code; `npm` only if you use Copilot.
 
 ```bash
-git clone <URL-deste-repo> fcc-claude-kit && cd fcc-claude-kit
-./install.sh --dry-run            # veja o que será feito
+git clone https://github.com/eac0d3r/fcc-claude-kit.git && cd fcc-claude-kit
+./install.sh --dry-run            # preview what will happen
 ./install.sh [--with-copilot]
 ```
 
-Depois siga o [PLAYBOOK](docs/PLAYBOOK.md): carregar o alias, cadastrar as chaves na Admin UI do FCC e ativar um profile.
+Then follow the [PLAYBOOK](docs/PLAYBOOK.md): load the shell alias, add your API keys in the FCC Admin UI, activate a profile.
 
-## Uso
+## Usage
 
 ```bash
 fcc-profile list
 fcc-profile use nvidia-free
-fcc-claude                              # Claude Code via FCC com o profile ativo
-fcc-claude -p openrouter-free           # escolhe e ativa outro profile
-fcc-claude -p nvidia-free -- --model haiku   # args do claude depois de --
+fcc-claude                                   # Claude Code via FCC with the active profile
+fcc-claude -p openrouter-free                # pick and activate another profile
+fcc-claude -p nvidia-free -- --model haiku   # claude args go after --
 ```
 
-Criar um profile (`SPEC` = `provider/modelo[@effort][=alias]`; effort padrão `high`):
+Create a profile (`SPEC` = `provider/model[@effort][=alias]`; default effort is `high`):
 
 ```bash
-fcc-profile models glm                  # ids disponíveis no catálogo do FCC
-fcc-profile new meu --model nvidia_nim/z-ai/glm-5.3 \
+fcc-profile models glm                       # model ids available in the FCC catalog
+fcc-profile new mine --model nvidia_nim/z-ai/glm-5.3 \
   --sonnet nvidia_nim/z-ai/glm-5.3-flash --haiku nvidia_nim/nvidia/nemotron-3.5-super-vl-120b-a12b
 ```
 
-`fable` repete o `opus` quando não informado. Os profiles ficam em `~/.config/fcc-profile/profiles/*.json` (sem segredos).
+`fable` repeats `opus` when not given. Profiles are stored in `~/.config/fcc-profile/profiles/*.json` (no secrets). Set `FCC_PROFILE_HOME` to relocate them.
 
-## Segurança e privacidade
+## Security and privacy
 
-- Chaves de API ficam só em `~/.fcc/.env` (criado pelo FCC). Este repo nunca as guarda.
-- O FCC escuta em `0.0.0.0` por padrão; `fcc-profile init` fixa `HOST=127.0.0.1`.
-- Com os providers, o código do seu projeto é enviado a terceiros; free tiers podem usá-lo para treino.
-- Um único server FCC atende todas as sessões: `fcc-profile use` troca o profile para todas as abertas.
+- API keys live only in `~/.fcc/.env` (created by FCC). This repo never stores them.
+- FCC listens on `0.0.0.0` by default; `fcc-profile init` pins `HOST=127.0.0.1`.
+- With these providers your project's code is sent to third parties; free tiers may use it for training.
+- A single FCC server serves every session: `fcc-profile use` switches the profile for all open `fcc-claude` sessions.
 
-## Desinstalar
+## Uninstall
 
-`./uninstall.sh` (mantém suas chaves e profiles) ou `./uninstall.sh --purge` (apaga `~/.fcc`).
+`./uninstall.sh` (keeps your keys and profiles) or `./uninstall.sh --purge` (deletes `~/.fcc`).
 
-## Licença
+## License
 
-MIT (veja `LICENSE`). O FCC mantém sua própria licença (AGPL-3.0).
+MIT (see `LICENSE`). FCC keeps its own license (AGPL-3.0).

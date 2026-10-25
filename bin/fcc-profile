@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""fcc-profile: profiles de modelos para o Free Claude Code (FCC) + launcher do Claude Code.
+"""fcc-profile: model profiles for Free Claude Code (FCC) + a Claude Code launcher.
 
-Profiles ficam em ~/.config/fcc-profile/profiles/<nome>.json (sem segredos).
-A fonte da verdade do roteamento é o server do FCC; `use` aplica o profile via
-POST /admin/api/config/apply. Chaves de API continuam só em ~/.fcc/.env.
+Profiles live in ~/.config/fcc-profile/profiles/<name>.json (no secrets).
+The FCC server is the source of truth for routing; `use` applies a profile via
+POST /admin/api/config/apply. API keys stay only in ~/.fcc/.env.
 """
 
 import argparse
@@ -29,7 +29,7 @@ NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,47}$")
 
 
 def die(msg: str, code: int = 1):
-    print(f"erro: {msg}", file=sys.stderr)
+    print(f"error: {msg}", file=sys.stderr)
     sys.exit(code)
 
 
@@ -70,8 +70,8 @@ def server_up() -> bool:
 def ensure_server():
     if server_up():
         return
-    binary = shutil.which("fcc-server") or die("fcc-server não encontrado no PATH")
-    print("subindo fcc-server em segundo plano...", file=sys.stderr)
+    binary = shutil.which("fcc-server") or die("fcc-server not found in PATH")
+    print("starting fcc-server in the background...", file=sys.stderr)
     subprocess.Popen(
         [binary], start_new_session=True, stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
@@ -81,7 +81,7 @@ def ensure_server():
         if server_up():
             return
         time.sleep(0.5)
-    die("fcc-server não respondeu em 30s (veja ~/.fcc/logs/)")
+    die("fcc-server did not respond within 30s (see ~/.fcc/logs/)")
 
 
 def available_models() -> list[str]:
@@ -92,30 +92,30 @@ def available_models() -> list[str]:
 
 def profile_path(name: str) -> Path:
     if not NAME_RE.match(name):
-        die(f"nome inválido: {name!r} (use letras, números, . _ -)")
+        die(f"invalid name: {name!r} (use letters, digits, . _ -)")
     return PROFILES_DIR / f"{name}.json"
 
 
 def load(name: str) -> dict:
     p = profile_path(name)
     if not p.exists():
-        die(f"profile não existe: {name}")
+        die(f"profile does not exist: {name}")
     return validate(json.loads(p.read_text()), name)
 
 
 def validate(prof: dict, name: str = "?") -> dict:
     def chk_effort(e, where):
         if e not in EFFORTS:
-            die(f"{name}: effort inválido em {where}: {e!r} (use {', '.join(EFFORTS)})")
+            die(f"{name}: invalid effort in {where}: {e!r} (use {', '.join(EFFORTS)})")
 
     if not isinstance(prof.get("model"), str) or "/" not in prof["model"]:
-        die(f"{name}: 'model' obrigatório no formato provider/modelo")
+        die(f"{name}: 'model' is required in provider/model format")
     chk_effort(prof.setdefault("effort", "client"), "effort")
     for t, spec in prof.setdefault("tiers", {}).items():
         if t not in TIERS:
-            die(f"{name}: tier desconhecido {t!r} (use {', '.join(TIERS)})")
+            die(f"{name}: unknown tier {t!r} (use {', '.join(TIERS)})")
         if not isinstance(spec.get("model"), str) or "/" not in spec["model"]:
-            die(f"{name}: tiers.{t}.model deve ser provider/modelo")
+            die(f"{name}: tiers.{t}.model must be provider/model")
         chk_effort(spec.setdefault("effort", "inherit"), f"tiers.{t}.effort")
     return prof
 
@@ -144,7 +144,7 @@ def alias_for(prof: dict, tier: str) -> str:
 
 
 def parse_spec(text: str) -> dict:
-    """MODELO[@EFFORT][=ALIAS]"""
+    """MODEL[@EFFORT][=ALIAS]"""
     alias = None
     if "=" in text:
         text, alias = text.split("=", 1)
@@ -158,9 +158,9 @@ def parse_spec(text: str) -> dict:
 
 
 def materialize(prof: dict):
-    """Grava no arquivo o que o run deduziria: os 3 tiers e o alias com o nome do modelo real."""
+    """Write to the file what `run` would infer: all tiers and an alias with the real model name."""
     for t in ("opus", "sonnet", "haiku", "fable"):
-        # fable repete o opus quando não informado
+        # fable repeats opus when not given
         default = prof["tiers"].get("opus") if t == "fable" else None
         spec = prof["tiers"].setdefault(t, dict(default) if default else {"model": prof["model"], "effort": prof["effort"]})
         spec.setdefault("alias", auto_alias(spec["model"]))
@@ -170,8 +170,8 @@ def apply(prof: dict):
     missing = [m for m in {prof["model"], *(s["model"] for s in prof["tiers"].values())}
                if m not in available_models()]
     if missing:
-        die("modelos indisponíveis no FCC: " + ", ".join(missing)
-            + "\n(use `fcc-profile models <filtro>` para listar os disponíveis)")
+        die("models unavailable in FCC: " + ", ".join(missing)
+            + "\n(use `fcc-profile models <filter>` to list available ones)")
     values = {"MODEL": prof["model"], "REASONING_POLICY": prof["effort"]}
     for t in TIERS:
         spec = prof["tiers"].get(t)
@@ -179,7 +179,7 @@ def apply(prof: dict):
         values[f"REASONING_{t.upper()}"] = spec["effort"] if spec else "inherit"
     res = api("/admin/api/config/apply", {"values": values})
     if res.get("pending_fields"):
-        print(f"aviso: exige reinício do fcc-server: {res['pending_fields']}", file=sys.stderr)
+        print(f"warning: fcc-server restart required: {res['pending_fields']}", file=sys.stderr)
 
 
 # ---------- comandos ----------
@@ -190,17 +190,17 @@ def cmd_list(_):
         p = load(n)
         print(f"{'*' if n == cur else ' '} {n:20} {p['model']}")
     if not names():
-        print("(nenhum profile; use `fcc-profile new`)")
+        print("(no profiles; use `fcc-profile new`)")
 
 
 def cmd_show(a):
     print(json.dumps(load(a.name), indent=2, ensure_ascii=False))
-    print("\nalias exibido:", {t: alias_for(load(a.name), t) for t in ("opus", "sonnet", "haiku")})
+    print("\ndisplayed alias:", {t: alias_for(load(a.name), t) for t in ("opus", "sonnet", "haiku")})
 
 
 def cmd_new(a):
     if profile_path(a.name).exists() and not a.force:
-        die(f"já existe: {a.name} (use --force para sobrescrever)")
+        die(f"already exists: {a.name} (use --force to overwrite)")
     base = parse_spec(a.model)
     prof = {"model": base["model"], "effort": base["effort"], "tiers": {}}
     for t in TIERS:
@@ -212,36 +212,36 @@ def cmd_new(a):
         avail = set(available_models())
         bad = [m for m in {prof["model"], *(s["model"] for s in prof["tiers"].values())} if m not in avail]
         if bad:
-            die("modelos indisponíveis no FCC: " + ", ".join(bad))
+            die("models unavailable in FCC: " + ", ".join(bad))
     save(a.name, prof)
-    print(f"criado: {a.name}  (ative com `fcc-profile use {a.name}`)")
+    print(f"created: {a.name}  (activate with `fcc-profile use {a.name}`)")
 
 
 def cmd_edit(a):
     p = profile_path(a.name)
     if not p.exists():
-        die(f"profile não existe: {a.name}")
+        die(f"profile does not exist: {a.name}")
     before = p.read_text()
     subprocess.call([*os.environ.get("EDITOR", "vi").split(), str(p)])
     try:
         validate(json.loads(p.read_text()), a.name)
     except (ValueError, SystemExit):
         p.write_text(before)
-        die("JSON/schema inválido; alteração revertida")
+        die("invalid JSON/schema; change reverted")
     if active() == a.name:
-        print("profile ativo alterado; rode `fcc-profile use %s` para reaplicar" % a.name)
+        print("active profile changed; run `fcc-profile use %s` to re-apply" % a.name)
 
 
 def cmd_rm(a):
     p = profile_path(a.name)
     if not p.exists():
-        die(f"profile não existe: {a.name}")
+        die(f"profile does not exist: {a.name}")
     if active() == a.name and not a.force:
-        die("é o profile ativo; ative outro antes ou use --force")
+        die("this is the active profile; activate another first or use --force")
     p.unlink()
     if active() == a.name:
         ACTIVE_FILE.unlink()
-    print(f"removido: {a.name}")
+    print(f"removed: {a.name}")
 
 
 def cmd_use(a):
@@ -250,12 +250,12 @@ def cmd_use(a):
     apply(prof)
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     ACTIVE_FILE.write_text(a.name + "\n")
-    print(f"ativo: {a.name}")
+    print(f"active: {a.name}")
 
 
 def cmd_current(_):
     cur = active()
-    print("profile ativo:", cur or "(nenhum)")
+    print("active profile:", cur or "(none)")
     if server_up():
         vals = {f["key"]: f["value"] for f in api("/admin/api/config")["fields"]
                 if f["key"].startswith(("MODEL", "REASONING_"))}
@@ -266,7 +266,7 @@ def cmd_current(_):
             if m:
                 print(f"  {t:6}", m, f"[{vals.get('REASONING_' + t.upper())}]")
     else:
-        print("server: parado")
+        print("server: stopped")
 
 
 def cmd_models(a):
@@ -277,14 +277,14 @@ def cmd_models(a):
 
 
 def tier_model_id(prof: dict, tier: str) -> str:
-    """Id enviado ao FCC e exibido pelo Claude Code (cabeçalho, statusline).
+    """Model id sent to FCC and shown by Claude Code (header, statusline).
 
-    O FCC roteia por substring (fable > opus > haiku > sonnet); o alias vai no id e o nome da
-    tier no fim. Palavras de tiers anteriores na ordem recebem um ZWSP para não desviar a rota.
+    FCC routes by substring (fable > opus > haiku > sonnet); the alias goes in the id and the
+    tier name at the end. Earlier-tier words inside the alias get a ZWSP so they do not hijack routing.
     """
     slug = re.sub(r"[^A-Za-z0-9._:]+", "-", alias_for(prof, tier)).strip("-")
     order = ("fable", "opus", "haiku", "sonnet")
-    for word in order[: order.index(tier)]:  # fable, opus, haiku são testados antes de sonnet
+    for word in order[: order.index(tier)]:  # fable, opus, haiku are matched before sonnet
         slug = re.sub(word, lambda m: m.group(0)[0] + "\u200b" + m.group(0)[1:], slug, flags=re.I)
     return f"{slug}-{tier}"
 
@@ -296,17 +296,17 @@ def claude_env(prof: dict | None, name: str | None) -> dict[str, str]:
     env.update({
         "ANTHROPIC_BASE_URL": base_url(),
         "ANTHROPIC_AUTH_TOKEN": cfg.get("ANTHROPIC_AUTH_TOKEN", "freecc"),
-        "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY": "0",  # sem isso o /model lista todo o catálogo do FCC
+        "CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY": "0",  # otherwise /model lists the whole FCC catalog
         "CLAUDE_CODE_AUTO_MODE_SERVER": "0",
         "CLAUDE_CODE_DISABLE_ADVISOR_TOOL": "1",
         "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "190000",
         "DISABLE_AUTOUPDATER": "1",
         "DISABLE_FEEDBACK_COMMAND": "1",
         "DISABLE_ERROR_REPORTING": "1",
-        # O effort é decidido pelo profile (REASONING_*). Sem isso o Claude Code manda uma
-        # mensagem role=system no fim, que o caminho nativo do Copilot no FCC rejeita (HTTP 400).
+        # Effort is decided by the profile (REASONING_*). Otherwise Claude Code appends a
+        # role=system message that the native Copilot path in FCC rejects (HTTP 400).
         "CLAUDE_CODE_EFFORT_LEVEL": "unset",
-        # Tool search injeta blocos de texto em tool_result que a NVIDIA NIM rejeita (HTTP 422).
+        # Tool search injects text blocks into tool_result that NVIDIA NIM rejects (HTTP 422).
         "ENABLE_TOOL_SEARCH": "false",
         "FCC_PROFILE": name or "",
     })
@@ -322,7 +322,7 @@ def claude_env(prof: dict | None, name: str | None) -> dict[str, str]:
 
 
 def cmd_run(a):
-    claude = shutil.which("claude") or die("claude não encontrado no PATH")
+    claude = shutil.which("claude") or die("claude not found in PATH")
     name = a.profile or active()
     prof = load(name) if name else None
     ensure_server()
@@ -330,7 +330,7 @@ def cmd_run(a):
         apply(prof)
         ACTIVE_FILE.write_text(name + "\n")
     elif prof is None:
-        print("aviso: nenhum profile ativo; usando o mapeamento atual do FCC", file=sys.stderr)
+        print("warning: no active profile; using the current FCC mapping", file=sys.stderr)
     os.execvpe(claude, [claude, *a.args], claude_env(prof, name))
 
 
@@ -342,36 +342,36 @@ def cmd_doctor(_):
         ok &= bool(good)
         print(f"[{'ok' if good else '!!'}] {label}" + (f": {detail}" if detail else ""))
 
-    check("claude no PATH", shutil.which("claude"), shutil.which("claude") or "")
-    check("fcc-server no PATH", shutil.which("fcc-server"))
+    check("claude in PATH", shutil.which("claude"), shutil.which("claude") or "")
+    check("fcc-server in PATH", shutil.which("fcc-server"))
     up = server_up()
-    check("server FCC respondendo", up, base_url())
+    check("FCC server responding", up, base_url())
     cfg = fcc_env()
-    check("HOST restrito a loopback", cfg.get("HOST") == "127.0.0.1",
-          f"HOST={cfg.get('HOST', '0.0.0.0 (padrão, exposto na rede)')}")
+    check("HOST restricted to loopback", cfg.get("HOST") == "127.0.0.1",
+          f"HOST={cfg.get('HOST', '0.0.0.0 (default, exposed to the network)')}")
     state, _ = patch_state()
-    check("patch do native.py (Copilot)", state == "aplicado", f"{state} (rode `fcc-profile patch`)" if state != "aplicado" else "")
+    check("native.py patch (Copilot)", state == "applied", f"{state} (run `fcc-profile patch`)" if state != "applied" else "")
     cop = shutil.which("copilot")
     ver = subprocess.run([cop, "--version"], capture_output=True, text=True).stdout if cop else ""
-    check("Copilot CLI 1.0.83", "1.0.83" in ver, ver.strip().splitlines()[0] if ver else "ausente")
+    check("Copilot CLI 1.0.83", "1.0.83" in ver, ver.strip().splitlines()[0] if ver else "missing")
     if up:
         avail = set(available_models())
         for n in names():
             p = load(n)
             bad = [m for m in {p["model"], *(s["model"] for s in p["tiers"].values())} if m not in avail]
-            check(f"profile {n}", not bad, "indisponível: " + ", ".join(bad) if bad else "modelos ok")
+            check(f"profile {n}", not bad, "unavailable: " + ", ".join(bad) if bad else "models ok")
     sys.exit(0 if ok else 1)
 
 
-# ---------- patch do FCC e configuração inicial ----------
+# ---------- FCC patch and initial setup ----------
 
 PATCH_OLD = """            if messages:
                 raise NativeMessagesError(
                     "Native Messages supports only leading system messages."
                 )
             content = raw["content"]"""
-PATCH_NEW = """            # fcc-profile patch: Claude Code envia mensagens system após o turno do
-            # usuário; a Messages API só tem o campo `system`, então elas são promovidas.
+PATCH_NEW = """            # fcc-profile patch: Claude Code sends system messages after the user turn;
+            # the Messages API only has the `system` field, so they are promoted to it.
             content = raw["content"]"""
 
 
@@ -387,76 +387,76 @@ def native_py() -> Path | None:
 def patch_state() -> tuple[str, Path | None]:
     path = native_py()
     if path is None:
-        return "ausente", None
+        return "missing", None
     text = path.read_text()
     if PATCH_NEW in text:
-        return "aplicado", path
-    return ("pendente" if PATCH_OLD in text else "incompatível"), path
+        return "applied", path
+    return ("pending" if PATCH_OLD in text else "incompatible"), path
 
 
 def cmd_patch(a):
-    """Aceita mensagens system tardias no caminho nativo do FCC (necessário para o Copilot)."""
+    """Accept late system messages in FCC's native path (required for Copilot)."""
     state, path = patch_state()
     if a.check:
         print(f"patch: {state}")
-        sys.exit(0 if state == "aplicado" else 1)
-    if state == "ausente":
-        die("FCC não encontrado em `uv tool dir` (instale com install.sh)")
-    if state == "incompatível":
-        die(f"{path}: trecho esperado não encontrado; a versão do FCC mudou. Revise o patch antes de aplicar")
+        sys.exit(0 if state == "applied" else 1)
+    if state == "missing":
+        die("FCC not found in `uv tool dir` (run install.sh)")
+    if state == "incompatible":
+        die(f"{path}: expected snippet not found; the FCC version changed. Review the patch before applying")
     backup = CONFIG_DIR / "native.py.orig"
     text = path.read_text()
     if a.revert:
-        if state != "aplicado":
-            die("patch não está aplicado")
+        if state != "applied":
+            die("patch is not applied")
         path.write_text(text.replace(PATCH_NEW, PATCH_OLD))
-        print("patch revertido; reinicie o fcc-server")
+        print("patch reverted; restart fcc-server")
         return
-    if state == "aplicado":
-        print("patch já aplicado")
+    if state == "applied":
+        print("patch already applied")
         return
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     if not backup.exists():
         backup.write_text(text)
     path.write_text(text.replace(PATCH_OLD, PATCH_NEW))
-    print(f"patch aplicado em {path}; reinicie o fcc-server se ele estiver rodando")
+    print(f"patch applied to {path}; restart fcc-server if it is running")
 
 
 def cmd_init(_):
-    """Garante HOST=127.0.0.1 em ~/.fcc/.env (o padrão do FCC é 0.0.0.0, exposto na rede)."""
+    """Ensure HOST=127.0.0.1 in ~/.fcc/.env (FCC defaults to 0.0.0.0, exposed to the network)."""
     FCC_ENV.parent.mkdir(parents=True, exist_ok=True)
     if not FCC_ENV.exists():
         FCC_ENV.write_text("# Managed by Free Claude Code.\nFCC_CONFIG_SCHEMA=2\n")
         FCC_ENV.chmod(0o600)
     text = FCC_ENV.read_text()
     if re.search(r"^HOST=", text, re.M):
-        print("HOST já definido em", FCC_ENV)
+        print("HOST already set in", FCC_ENV)
         return
     FCC_ENV.write_text(text.rstrip("\n") + "\nHOST=127.0.0.1\n")
-    print("HOST=127.0.0.1 gravado em", FCC_ENV, "(vale no próximo start do fcc-server)")
+    print("HOST=127.0.0.1 written to", FCC_ENV, "(takes effect on the next fcc-server start)")
 
 
 def main():
     ap = argparse.ArgumentParser(prog="fcc-profile", description=__doc__.split("\n")[0])
     sub = ap.add_subparsers(dest="cmd", required=True)
-    sub.add_parser("list", help="lista profiles").set_defaults(f=cmd_list)
-    s = sub.add_parser("show", help="mostra um profile"); s.add_argument("name"); s.set_defaults(f=cmd_show)
-    s = sub.add_parser("new", help="cria profile", epilog="spec = provider/modelo[@effort][=alias]")
-    s.add_argument("name"); s.add_argument("--model", required=True, help="modelo padrão (MODEL)")
+    sub.add_parser("list", help="list profiles").set_defaults(f=cmd_list)
+    s = sub.add_parser("show", help="show a profile"); s.add_argument("name"); s.set_defaults(f=cmd_show)
+    s = sub.add_parser("new", help="create a profile", epilog="spec = provider/model[@effort][=alias]")
+    s.add_argument("name"); s.add_argument("--model", required=True, help="default model (MODEL)")
     for t in TIERS:
         s.add_argument(f"--{t}", metavar="SPEC")
     s.add_argument("--force", action="store_true"); s.set_defaults(f=cmd_new)
-    s = sub.add_parser("edit", help="edita no $EDITOR"); s.add_argument("name"); s.set_defaults(f=cmd_edit)
-    s = sub.add_parser("rm", help="exclui profile"); s.add_argument("name"); s.add_argument("--force", action="store_true"); s.set_defaults(f=cmd_rm)
-    s = sub.add_parser("use", help="ativa profile no FCC"); s.add_argument("name"); s.set_defaults(f=cmd_use)
-    sub.add_parser("current", help="profile ativo e mapeamento real").set_defaults(f=cmd_current)
-    s = sub.add_parser("models", help="lista modelos disponíveis"); s.add_argument("filter", nargs="*"); s.set_defaults(f=cmd_models)
-    s = sub.add_parser("run", help="roda o Claude Code via FCC")
+    s = sub.add_parser("edit", help="edit in $EDITOR"); s.add_argument("name"); s.set_defaults(f=cmd_edit)
+    s = sub.add_parser("rm", help="delete a profile"); s.add_argument("name"); s.add_argument("--force", action="store_true"); s.set_defaults(f=cmd_rm)
+    s = sub.add_parser("use", help="activate a profile in FCC"); s.add_argument("name"); s.set_defaults(f=cmd_use)
+    sub.add_parser("current", help="active profile and real mapping").set_defaults(f=cmd_current)
+    s = sub.add_parser("models", help="list available models"); s.add_argument("filter", nargs="*"); s.set_defaults(f=cmd_models)
+    s = sub.add_parser("run", help="run Claude Code through FCC")
     s.add_argument("-p", "--profile"); s.add_argument("args", nargs=argparse.REMAINDER); s.set_defaults(f=cmd_run)
-    sub.add_parser("doctor", help="diagnóstico").set_defaults(f=cmd_doctor)
-    s = sub.add_parser("patch", help="aplica/verifica o patch do FCC para o Copilot")
+    sub.add_parser("doctor", help="diagnostics").set_defaults(f=cmd_doctor)
+    s = sub.add_parser("patch", help="apply/check the FCC patch needed for Copilot")
     s.add_argument("--check", action="store_true"); s.add_argument("--revert", action="store_true"); s.set_defaults(f=cmd_patch)
-    sub.add_parser("init", help="configuração inicial segura do FCC (HOST loopback)").set_defaults(f=cmd_init)
+    sub.add_parser("init", help="safe initial FCC setup (loopback HOST)").set_defaults(f=cmd_init)
     a = ap.parse_args()
     if getattr(a, "args", None) and a.args[:1] == ["--"]:
         a.args = a.args[1:]
@@ -467,4 +467,4 @@ if __name__ == "__main__":
     try:
         main()
     except urllib.error.URLError as e:
-        die(f"falha ao falar com o FCC: {e.reason}")
+        die(f"failed to reach FCC: {e.reason}")

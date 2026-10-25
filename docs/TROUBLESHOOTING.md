@@ -1,16 +1,16 @@
-# Problemas conhecidos
+# Known issues
 
-| Sintoma | Causa | Solução |
+| Symptom | Cause | Fix |
 |---|---|---|
-| `400 Native Messages supports only leading system messages` (Copilot) | O Claude Code ≥ 2.1 envia mensagens `role: system` depois do turno do usuário; o caminho nativo do FCC 6.16.15 só aceita no início | `fcc-profile patch` (promove essas mensagens ao campo `system`) e reinicie o `fcc-server`. Vale reabrir uma issue no FCC se persistir em versões novas |
-| `422 ... messages.N.content.str` (NVIDIA NIM) | O *tool search* do Claude Code injeta blocos de texto em `tool_result` que a NIM rejeita | Já tratado: `fcc-profile run` define `ENABLE_TOOL_SEARCH=false` |
-| `401 User not found` (OpenRouter) | Chave é *Management Key* | Crie uma **API Key** comum |
-| `402 quota_exceeded` (Copilot) | Cota do plano esgotada | Aguarde a renovação ou use outro provider |
-| `/model` lista ~800 modelos | Gateway discovery ligado (`fcc-claude` original do FCC) | Use o alias `fcc-claude` do kit (`fcc-profile run`) |
-| Copilot "disconnected" depois de reiniciar o server | Estado de conexão do FCC | Reconecte (device login) na Admin UI |
-| Alias não carregou | `.zshrc` lido só ao abrir o terminal | `source ~/.zshrc`; `type fcc-claude` |
-| Effort do Claude Code ignorado | O effort é decidido pelo profile (`REASONING_*`); `fcc-profile run` define `CLAUDE_CODE_EFFORT_LEVEL=unset` | Edite o `effort` do tier no profile e rode `fcc-profile use` |
+| `400 Native Messages supports only leading system messages` (Copilot) | Claude Code >= 2.1 sends `role: system` messages after the user turn; FCC 6.16.15's native path only accepts them at the start | `fcc-profile patch` (promotes those messages to the `system` field), then restart `fcc-server`. Consider reporting upstream if it persists on newer FCC versions |
+| `422 ... messages.N.content.str` (NVIDIA NIM) | Claude Code's *tool search* injects text blocks into `tool_result` that NIM rejects | Already handled: `fcc-profile run` sets `ENABLE_TOOL_SEARCH=false` |
+| `401 User not found` (OpenRouter) | The key is a *Management Key* | Create a regular **API Key** |
+| `402 quota_exceeded` (Copilot) | Plan quota exhausted | Wait for renewal or use another provider |
+| `/model` lists ~800 models | Gateway model discovery is on (FCC's original `fcc-claude`) | Use this kit's `fcc-claude` alias (`fcc-profile run`) |
+| Copilot "disconnected" after a server restart | FCC connection state | Reconnect (device login) in the Admin UI |
+| Alias not found | `.zshrc` is only read when a terminal starts | `source ~/.zshrc`; check with `type fcc-claude` |
+| Claude Code effort setting ignored | Effort is decided by the profile (`REASONING_*`); `fcc-profile run` sets `CLAUDE_CODE_EFFORT_LEVEL=unset` | Edit the tier's `effort` in the profile and run `fcc-profile use` |
 
-## Como o alias funciona
+## How the model alias works
 
-O Claude Code ≥ 2.1 ignora `ANTHROPIC_DEFAULT_*_MODEL_NAME` com gateway. Então o `fcc-profile run` fixa `ANTHROPIC_DEFAULT_<TIER>_MODEL` num id que contém o alias e termina com o nome do tier (`glm-5.3-NIM-opus`). O FCC roteia por substring (`fable > opus > haiku > sonnet`); palavras de tiers anteriores dentro do alias recebem um caractere invisível para não desviar a rota.
+Claude Code >= 2.1 ignores `ANTHROPIC_DEFAULT_*_MODEL_NAME` when talking to a gateway. So `fcc-profile run` pins `ANTHROPIC_DEFAULT_<TIER>_MODEL` to an id that contains the alias and ends with the tier name (`glm-5.3-NIM-opus`). FCC routes by substring (`fable > opus > haiku > sonnet`); tier words from earlier in that order that appear inside an alias get an invisible character so they do not hijack routing.

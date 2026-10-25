@@ -1,4 +1,4 @@
-# Versões fixadas. Alterar aqui e rodar tests/smoke.sh antes de publicar.
+# Pinned versions. Change here, then run tests/smoke.sh before publishing.
 FCC_VERSION=6.16.15
 PYTHON_VERSION=3.14.7
 COPILOT_CLI_VERSION=1.0.83

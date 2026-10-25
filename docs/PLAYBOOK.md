@@ -1,53 +1,53 @@
 # Playbook
 
-Roteiro para reproduzir a solução do zero. Os passos 1–2 o `install.sh` faz; o resto é manual porque envolve contas e segredos.
+A runbook to reproduce the setup from scratch. `install.sh` does steps 1 and 2 for you; the rest is manual because it involves accounts and secrets.
 
-## 1. Instalar
+## 1. Install
 
 ```bash
-./install.sh --with-copilot     # sem a flag, pula o Copilot CLI
+./install.sh --with-copilot     # drop the flag to skip the Copilot CLI
 ```
 
-Instala: FCC `6.16.15` (via `uv tool`), `fcc-profile` em `~/.local/bin`, profiles de exemplo em `~/.config/fcc-profile/profiles/` (não sobrescreve os seus), Copilot CLI `1.0.83` (opcional), `HOST=127.0.0.1` e o patch do FCC.
+It installs: FCC `6.16.15` (via `uv tool`), `fcc-profile` in `~/.local/bin`, example profiles in `~/.config/fcc-profile/profiles/` (existing ones are not overwritten), Copilot CLI `1.0.83` (optional), `HOST=127.0.0.1` and the FCC patch.
 
-## 2. Carregar o alias
+## 2. Load the alias
 
 ```bash
-echo 'source /caminho/para/fcc-claude-kit/shell/fcc.sh' >> ~/.zshrc   # ou ~/.bashrc
+echo 'source /path/to/fcc-claude-kit/shell/fcc.sh' >> ~/.zshrc   # or ~/.bashrc
 source ~/.zshrc
-type fcc-claude    # deve dizer: alias for fcc-profile run
+type fcc-claude    # should say: alias for fcc-profile run
 ```
 
-## 3. Subir o server e abrir a Admin UI
+## 3. Start the server and open the Admin UI
 
 ```bash
 fcc-server
 ```
 
-Abra http://127.0.0.1:8082/admin. (O `fcc-profile run` também sobe o server sozinho em segundo plano.)
+Open http://127.0.0.1:8082/admin. (`fcc-profile run` also starts the server in the background if it is down.)
 
-## 4. Conectar os providers (manual)
+## 4. Connect the providers (manual)
 
-| Provider | Onde obter | Atenção |
+| Provider | Where to get access | Notes |
 |---|---|---|
-| NVIDIA NIM | build.nvidia.com → API key | cole em Providers → NVIDIA NIM |
-| OpenRouter | openrouter.ai/keys → **Create API Key** | **não** use *Management Key*: ela lista modelos mas dá `401 User not found` na inferência |
-| GitHub Copilot | Providers → GitHub Copilot → Connect (device login) | exige Copilot CLI **1.0.83** no PATH; não rode `copilot update`; exige cota/plano ativo |
+| NVIDIA NIM | build.nvidia.com -> API key | paste it in Providers -> NVIDIA NIM |
+| OpenRouter | openrouter.ai/keys -> **Create API Key** | do **not** use a *Management Key*: it lists models but inference returns `401 User not found` |
+| GitHub Copilot | Providers -> GitHub Copilot -> Connect (device login) | needs Copilot CLI **1.0.83** in PATH; never run `copilot update`; needs an active plan/quota |
 
-## 5. Ativar um profile e validar
+## 5. Activate a profile and validate
 
 ```bash
 fcc-profile list
 fcc-profile use nvidia-free
 fcc-profile doctor
-cd /algum/projeto && echo oi > probe.txt
-fcc-claude -- -p "Use Read para ler probe.txt e responda só o conteúdo" --model sonnet --allowedTools Read
+cd /some/project && echo hi > probe.txt
+fcc-claude -- -p "Use Read on probe.txt and answer with its content only" --model sonnet --allowedTools Read
 ```
 
-O nome do modelo real (ex.: `glm-5.3-flash-NIM-sonnet`) aparece no cabeçalho do Claude Code.
+The real model name (e.g. `glm-5.3-flash-NIM-sonnet`) appears in the Claude Code header.
 
-## 6. Manutenção
+## 6. Maintenance
 
-- Atualizou o FCC (`uv tool upgrade`/`fcc-update`)? Rode `fcc-profile patch --check`; se falhar, `fcc-profile patch`. Se disser "incompatível", a versão mudou: revise `PATCH_OLD`/`PATCH_NEW` em `bin/fcc-profile`.
-- Mudou `VERSIONS`? Rode `tests/smoke.sh` e um `fcc-claude` real por provider.
-- Modelo sumiu do catálogo? `fcc-profile doctor` aponta; `fcc-profile models <termo>` mostra os atuais.
+- Upgraded FCC (`uv tool upgrade` / `fcc-update`)? Run `fcc-profile patch --check`; if it fails, run `fcc-profile patch`. If it reports "incompatible", the FCC version changed: review `PATCH_OLD`/`PATCH_NEW` in `bin/fcc-profile`.
+- Changed `VERSIONS`? Run `tests/smoke.sh` and a real `fcc-claude` call per provider.
+- A model disappeared from the catalog? `fcc-profile doctor` flags it; `fcc-profile models <term>` shows the current ones.
